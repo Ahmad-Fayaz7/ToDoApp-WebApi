@@ -1,0 +1,27 @@
+# .NET files
+bin/
+obj/
+*.log
+*.vs
+.vscode/
+**/*.csproj.user
+*.db
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Configuration files
+appsettings.Development.json
+
+# Entity Framework Migrations (optional, based on your workflow)
+# Migrations/
+
+# Rider project files
+.idea/
+
+# ReSharper files
+*.DotSettings.user
+
+# Mac OS
+.DS_Store
