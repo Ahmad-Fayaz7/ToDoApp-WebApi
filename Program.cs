@@ -1,8 +1,11 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using ToDoApp_API.Models;
+using ToDoApp_API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 // Configure JWT authentication
@@ -13,12 +16,22 @@ var secretKey = Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]);
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Add Identity service
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders();
+
 builder.Services.AddAutoMapper(typeof(Program)); // Register AutoMapper with dependency injection
 builder.Services.AddControllers(); // Add support for controllers
 
+// custom services
+builder.Services.AddScoped<TokenService>();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer(); // Adds endpoints API explorer for minimal APIs
 builder.Services.AddSwaggerGen(); // Register Swagger/OpenAPI services
+
+// Clear the default inbound claim type map
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 // Add CORS policy
 builder.Services.AddCors(options =>
@@ -38,6 +51,7 @@ builder.Services.AddAuthentication(options =>
     //options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 }).AddJwtBearer(options =>
 {
+    options.MapInboundClaims = false;
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = false,

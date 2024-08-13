@@ -7,8 +7,9 @@ public class TokenService(IConfiguration configuration)
 {
 
 
-public string GenerateJwtToken(string username)
+public string GenerateJwtToken(string email)
 {
+   
     var jwtSettings = configuration.GetSection("JwtSettings");
     var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]));
     var signinCredentials = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
@@ -18,7 +19,7 @@ public string GenerateJwtToken(string username)
         audience: jwtSettings["Audience"],
         claims: new List<Claim>
         {
-            new Claim(ClaimTypes.Name, username)
+            new Claim(ClaimTypes.Email, email)
         },
         expires: DateTime.Now.AddMinutes(Convert.ToDouble(jwtSettings["ExpiresInMinutes"])),
         signingCredentials: signinCredentials

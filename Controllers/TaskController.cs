@@ -1,8 +1,10 @@
+using System.Security.Claims;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ToDoApp_API.DTOs;
 using ToDoApp_API.Models;
@@ -12,16 +14,20 @@ namespace ToDoApp_API.Controllers
 {
     [Route("api/tasks")]
     [ApiController] // Add the ApiController attribute for automatic model state validation
-    //[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
-    public class TaskController(ApplicationDbContext context, IMapper mapper) : ControllerBase
+    //[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Policy = "AllowAngularApp")]
+    public class TaskController(ApplicationDbContext context, IMapper mapper, UserManager<ApplicationUser> userManager) : ControllerBase
     {
         [HttpPost]
         public async Task<ActionResult> Create([FromBody] TaskCreationDTO taskCreationDto)
         {
             if (!ModelState.IsValid) // Ensure model state is valid
                 return BadRequest(ModelState);
-
+          
+            
+            var userEmail = User.FindFirstValue(ClaimTypes.Name);
+            var user = context.Users.Include(u => u.Tasks).FirstOrDefault(u => u.Email == userEmail);
             var task = mapper.Map<Task>(taskCreationDto); // Correct mapping
+            task.UserId = user.Id;
             await context.Tasks.AddAsync(task);
             await context.SaveChangesAsync(); // Don't forget to save changes
 
@@ -31,8 +37,14 @@ namespace ToDoApp_API.Controllers
         [HttpGet]
         public async Task<ActionResult<List<Task>>> Get()
         {
-            var tasks = await context.Tasks.OrderBy(x => x.CreatedAt).ToListAsync();
-            return tasks; // Use ActionResult to return an appropriate HTTP status code or other types
+            //var user2 = HttpContext.User.FindFirstValue(ClaimTypes.Email);
+            var userClaims = User.Claims;
+            var email = userClaims.FirstOrDefault(c => c.Type == "Email");
+            var userEmail = User.FindFirstValue(ClaimTypes.Name);
+            var user = context.Users.Include(u => u.Tasks).FirstOrDefault(u => u.Email == userEmail);
+            
+            //var tasks = await context.Tasks.Where(t => t.UserId == user.Id).OrderBy(x => x.CreatedAt).ToListAsync();
+            return user.Tasks.ToList(); // Use ActionResult to return an appropriate HTTP status code or other types
         }
 
         [HttpGet("{id:int}")]
@@ -41,7 +53,7 @@ namespace ToDoApp_API.Controllers
             var task = await context.Tasks.FirstOrDefaultAsync(x => x.Id == id);
             return task;
         }
-        
+
         [HttpDelete("{id:int}")]
         public async Task<ActionResult> Delete(int id)
         {
