@@ -23,28 +23,29 @@ namespace ToDoApp_API.Controllers
             if (!ModelState.IsValid) // Ensure model state is valid
                 return BadRequest(ModelState);
           
-            
-            var userEmail = User.FindFirstValue(ClaimTypes.Name);
-            var user = context.Users.Include(u => u.Tasks).FirstOrDefault(u => u.Email == userEmail);
-            var task = mapper.Map<Task>(taskCreationDto); // Correct mapping
+            var userClaims = User.Claims;
+            var email = userClaims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+            var user = await context.Users.Include(u => u.Tasks).FirstOrDefaultAsync(u => u.Email == email);
+            var task = mapper.Map<Task>(taskCreationDto); 
             task.UserId = user.Id;
             await context.Tasks.AddAsync(task);
-            await context.SaveChangesAsync(); // Don't forget to save changes
+            await context.SaveChangesAsync(); // save changes
 
             return NoContent(); // Return NoContent or CreatedAtAction if you want to return the created resource
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<Task>>> Get()
+        public async Task<ActionResult<List<TaskDTO>>> Get()
         {
             //var user2 = HttpContext.User.FindFirstValue(ClaimTypes.Email);
             var userClaims = User.Claims;
-            var email = userClaims.FirstOrDefault(c => c.Type == "Email");
-            var userEmail = User.FindFirstValue(ClaimTypes.Name);
-            var user = context.Users.Include(u => u.Tasks).FirstOrDefault(u => u.Email == userEmail);
-            
+            var email = userClaims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+
+            var user =  await context.Users.Include(u => u.Tasks).FirstOrDefaultAsync(u => u.Email == email);
+            var tasks = user.Tasks;
+            var taskDto = mapper.Map<List<TaskDTO>>(tasks);
             //var tasks = await context.Tasks.Where(t => t.UserId == user.Id).OrderBy(x => x.CreatedAt).ToListAsync();
-            return user.Tasks.ToList(); // Use ActionResult to return an appropriate HTTP status code or other types
+            return taskDto; // Use ActionResult to return an appropriate HTTP status code or other types
         }
 
         [HttpGet("{id:int}")]
