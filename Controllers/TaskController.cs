@@ -35,17 +35,24 @@ namespace ToDoApp_API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<TaskDTO>>> Get()
+        public async Task<ActionResult> Get([FromQuery] int pageIndex, int pageSize)
         {
             //var user2 = HttpContext.User.FindFirstValue(ClaimTypes.Email);
             var userClaims = User.Claims;
             var email = userClaims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
 
-            var user =  await context.Users.Include(u => u.Tasks).FirstOrDefaultAsync(u => u.Email == email);
+            var user =  await context.Users
+                .Include(u => u.Tasks.Skip((pageIndex -1 ) * pageSize).Take(pageSize))
+                .FirstOrDefaultAsync(u => u.Email == email);
             var tasks = user.Tasks;
+            var totalAmountOfRecords = context.Tasks.Count(t => t.UserId == user.Id);
             var taskDto = mapper.Map<List<TaskDTO>>(tasks);
             //var tasks = await context.Tasks.Where(t => t.UserId == user.Id).OrderBy(x => x.CreatedAt).ToListAsync();
-            return taskDto; // Use ActionResult to return an appropriate HTTP status code or other types
+            return Ok( new
+            {
+                TaskDto = taskDto,
+                TotalRecords = totalAmountOfRecords
+            }); // Use ActionResult to return an appropriate HTTP status code or other types
         }
 
         [HttpGet("{id:int}")]
